@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>@</title>
+  
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="icon" type="image/png" href="assets/images/favicon.png" />
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- Entry Gate -->
+  <div id="gate" class="gate-overlay">
+    <div class="gate-content">
+      <i class="fa-solid fa-volume-high pulse-icon"></i>
+      <p>[ click anywhere to enter ]</p>
+    </div>
+  </div>
+
+  <!-- Top-Left Audio Controls Cluster -->
+  <div class="audio-controls-group">
+    <button id="audio-toggle" class="audio-control-sq" aria-label="Toggle Audio" title="Play / Pause">
+      <i class="fa-solid fa-volume-xmark" id="audio-icon"></i>
+    </button>
+    <button id="audio-skip" class="audio-control-sq" aria-label="Next Song" title="Skip to next track">
+      <i class="fa-solid fa-forward-step"></i>
+    </button>
+  </div>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <main class="page-container">
+    <div class="bio-card" id="bio-card">
+      
+      <!-- Main Profile Header (Top Avatar & Display Name) -->
+      <div class="profile-header">
+        <div class="avatar-wrapper">
+          <img id="main-avatar" src="assets/images/avatar.png" alt="Profile" class="avatar" />
+        </div>
+        <h1 class="display-name" id="display-name">Username</h1>
+      </div>
+
+      <!-- guns.lol Embedded Discord Badge Box -->
+      <div class="discord-card-box" id="discord-box">
+        <div class="discord-pfp-wrapper">
+          <img id="discord-avatar" src="assets/images/avatar.png" alt="Discord PFP" class="discord-pfp" />
+          <span class="discord-status-dot offline" id="discord-status-dot"></span>
+        </div>
+        <div class="discord-info">
+          <div class="discord-header-line">
+            <span class="discord-username" id="discord-username">loading...</span>
+            <span class="discord-clan-tag hidden" id="discord-clan-tag"></span>
+            <div class="discord-badges" id="discord-badges"></div>
+          </div>
+          <div class="discord-status-msg" id="discord-status-msg">currently doing nothing</div>
+        </div>
+      </div>
+
+      <!-- Bio / Description -->
+      <p class="bio-text" id="bio-text">
+        Building things, gaming, and designing aesthetics.
+      </p>
+
+      <!-- Minimalist Horizontal Social Icons Row -->
+      <div class="socials-row">
+        <a href="https://steamcommunity.com" target="_blank" rel="noopener" class="social-icon-btn" title="Steam">
+          <i class="fa-brands fa-steam"></i>
+        </a>
+        <a href="https://github.com" target="_blank" rel="noopener" class="social-icon-btn" title="GitHub">
+          <i class="fa-brands fa-github"></i>
+        </a>
+        <a href="https://instagram.com" target="_blank" rel="noopener" class="social-icon-btn" title="Instagram">
+          <i class="fa-brands fa-instagram"></i>
+        </a>
+        <button id="copy-discord" class="social-icon-btn" title="Copy Discord Tag" data-tag="username">
+          <i class="fa-brands fa-discord"></i>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <audio id="bg-audio" src="assets/audio/song.mp3" preload="auto" loop></audio>
+
+  <script defer src="assets/js/audio.js"></script>
+  <script defer src="assets/js/main.js"></script>
+  <script defer src="assets/js/discord.js"></script>
+</body>
+</html>
