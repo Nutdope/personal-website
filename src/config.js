@@ -30,11 +30,13 @@ export const USER_TIERS = {
 /* Audio                                                */
 /* ---------------------------------------------------- */
 // Files live in public/assets/audio/
-export const PLAYLIST = [
-  "assets/audio/song.mp3",
-  "assets/audio/song2.mp3",
-  "assets/audio/song3.mp3",
-].map(asset);
+const tracks = import.meta.glob("./assets/audio/*.{mp3,ogg,wav,m4a}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+
+export const PLAYLIST = Object.keys(tracks).sort().map((k) => tracks[k]);
 
 // Starting volume (0-1) on a visitor's first load; after that their choice is remembered.
 export const AUDIO_VOLUME = 0.4;
