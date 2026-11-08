@@ -42,7 +42,21 @@ body {
 }
 
 /* ---------------------------------------------------- */
-/* Audio controls (persistent, top-left)                */
+/* Music visualizer (full width, hangs from the top)    */
+/* ---------------------------------------------------- */
+.visualizer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 96px;
+  pointer-events: none;
+  z-index: 5; /* above the particles, below page content and the controls */
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.45));
+}
+
+/* ---------------------------------------------------- */
+/* Audio controls: one pill that sits on the visualizer */
 /* ---------------------------------------------------- */
 .audio-controls-group {
   position: fixed;
@@ -50,38 +64,85 @@ body {
   left: 24px;
   z-index: 50;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
 }
 
-.audio-control-sq {
-  width: 46px;
+.audio-pill {
+  display: flex;
+  align-items: center;
   height: 46px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(15, 15, 18, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.audio-pill.playing {
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.audio-btn {
+  width: 46px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  outline: none;
   color: #d4d4d8;
   font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  outline: none;
-  /* transform is driven by Framer Motion, so don't transition it here */
-  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease,
-    box-shadow 0.25s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
-.audio-control-sq:hover {
-  background: rgba(24, 24, 30, 0.85);
-  border-color: rgba(255, 255, 255, 0.2);
+.audio-btn:first-child {
+  border-radius: 15px 0 0 15px;
+}
+
+.audio-btn:last-child {
+  border-radius: 0 15px 15px 0;
+}
+
+.audio-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
   color: #ffffff;
 }
 
-.audio-control-sq:focus-visible,
+.audio-btn:active {
+  transform: scale(0.92);
+}
+
+.audio-btn.playing {
+  color: var(--accent);
+}
+
+.audio-btn.adjusting {
+  background: rgba(168, 85, 247, 0.16);
+  color: var(--accent);
+}
+
+.sound-btn {
+  touch-action: none; /* so a touch-and-drag adjusts volume instead of scrolling */
+}
+
+.audio-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.audio-btn:focus-visible,
 .nav-tab:focus-visible,
 .social-icon-btn:focus-visible,
 .project-links a:focus-visible {
@@ -89,10 +150,78 @@ body {
   outline-offset: 2px;
 }
 
-.audio-control-sq.playing {
-  color: var(--accent);
-  border-color: rgba(168, 85, 247, 0.4);
-  box-shadow: 0 0 20px var(--accent-glow);
+/* ---------------------------------------------------- */
+/* Volume bar (press and hold the sound button)         */
+/* ---------------------------------------------------- */
+.volume-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(240px, calc(100vw - 32px));
+  padding: 6px 16px;
+  border-radius: 16px;
+  background: rgba(15, 15, 18, 0.78);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 24px rgba(168, 85, 247, 0.18);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.volume-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Taller, wider hit area around the thin track so it's easy to grab */
+.volume-hit {
+  flex: 1;
+  padding: 14px 7px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.volume-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.volume-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7c3aed, var(--accent), #d8b4fe);
+  box-shadow: 0 0 12px var(--accent-glow);
+  transition: width 0.06s linear;
+}
+
+.volume-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.45), 0 0 14px var(--accent-glow);
+  transform: translate(-50%, -50%) scale(1);
+  transition: transform 0.15s ease, left 0.06s linear;
+}
+
+.volume-panel.adjusting .volume-thumb {
+  transform: translate(-50%, -50%) scale(1.3);
+}
+
+.volume-value {
+  min-width: 26px;
+  text-align: right;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
 }
 
 /* ---------------------------------------------------- */

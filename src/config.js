@@ -36,6 +36,7 @@ export const PLAYLIST = [
   "assets/audio/song3.mp3",
 ].map(asset);
 
+// Starting volume (0-1) on a visitor's first load; after that their choice is remembered.
 export const AUDIO_VOLUME = 0.4;
 
 /* ---------------------------------------------------- */
