@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
@@ -12,6 +12,17 @@ import { useTypewriterTitle } from "./hooks/useTypewriterTitle";
 import { getDiscordProfile } from "./lib/discord";
 import BioView from "./views/BioView";
 import PortfolioView from "./views/PortfolioView";
+
+// Lazy-loaded so three.js (the heavy part) only downloads when someone opens the viewer.
+const SolidWorksView = lazy(() => import("./views/SolidWorksView"));
+
+function ViewLoading() {
+  return (
+    <div className="view-loading">
+      <i className="fa-solid fa-circle-notch fa-spin" /> Loading...
+    </div>
+  );
+}
 
 export default function App() {
   const location = useLocation();
@@ -36,6 +47,14 @@ export default function App() {
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<BioView profile={profile} />} />
             <Route path="/portfolio" element={<PortfolioView profile={profile} />} />
+            <Route
+              path="/portfolio/solidworks"
+              element={
+                <Suspense fallback={<ViewLoading />}>
+                  <SolidWorksView />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AnimatePresence>

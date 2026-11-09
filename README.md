@@ -56,10 +56,13 @@ src/
     DiscordCard.jsx             Presence card
     SocialLinks.jsx             Social icons + copy-Discord-tag button
     NavTabs.jsx                 Bottom pill nav with sliding highlight
-    ProjectCard.jsx             Portfolio card
+    ProjectCard.jsx             Portfolio card (whole card can link to a page)
+    ModelViewer.jsx             three.js viewer (orbit, zoom, wireframe, reset)
   views/
-    BioView.jsx, PortfolioView.jsx, transitions.js
+    BioView.jsx, PortfolioView.jsx, SolidWorksView.jsx, transitions.js
   data/projects.js              Your portfolio entries (edit this)
+  data/solidworks.js            The 3D parts in the SolidWorks viewer (edit this)
+  lib/placeholderModels.js      Built-in stand-in parts (gear, flange, bracket)
 ```
 
 ## How audio survives view changes
@@ -84,6 +87,40 @@ so they stay mounted and visible on every view.
   `audio.volume` is read-only). The audio files must be same-origin, which files in
   `public/` are.
 - Users with "reduce motion" enabled get no visualizer animation.
+
+## SolidWorks 3D viewer
+
+The "SolidWorks Projects" card opens `/portfolio/solidworks`: a three.js viewer where
+you drag to rotate, scroll/pinch to zoom and right-drag to pan, with a list to switch
+between parts, plus auto-rotate, wireframe and reset-view buttons. The viewer is
+lazy-loaded, so three.js only downloads when someone opens that page. Audio keeps
+playing while you're in it.
+
+**Adding your own parts**
+
+1. Export from SolidWorks: `File > Save As > STL` (binary is fine). Browsers can't open
+   `.sldprt` / `.sldasm` directly. For colours or assemblies, convert STEP to `.glb`
+   (Blender, FreeCAD or an online converter).
+2. Copy the files into `public/assets/models/`.
+3. Add an entry to `src/data/solidworks.js`:
+
+```js
+{
+  id: "my-part",
+  name: "My Part",
+  description: "What it is and what you designed.",
+  icon: "fa-solid fa-gear",
+  color: "#c4b5fd",
+  tags: ["Part"],
+  specs: [["Material", "Aluminium 6061"]],
+  source: { type: "stl", url: asset("assets/models/my-part.stl") },
+  // rotation: [-90, 0, 0],   // if it loads lying on its side
+}
+```
+
+STL files have no colour, so `color` tints them; `.glb` files keep their own materials.
+Every model is automatically centred and scaled to fit. The three built-in parts are
+placeholders, so delete them once you have your own.
 
 ## Deploying
 
