@@ -77,4 +77,19 @@ export const SW_MODELS = [
   ],
   source: { type: "stl", url: asset("assets/models/arbore.STL") },
 },
+
+ {
+  id: "piesa4",
+  name: "Piesa4",
+  description: "Mechanical shaft, 105 mm long.",
+  icon: "fa-solid fa-gears",
+  color: "#c4b5fd",
+  tags: ["Part", "Shaft"],
+  specs: [
+    ["Length", "105 mm"],
+    ["Max diameter", "28 mm"],
+    ["Software", "SolidWorks"],
+  ],
+  source: { type: "stl", url: asset("assets/models/part4.STL") },
+},
 ];
