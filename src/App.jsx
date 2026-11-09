@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useMemo, useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
@@ -27,6 +27,11 @@ function ViewLoading() {
 export default function App() {
   const location = useLocation();
 
+  // Log visitor IP to Vercel runtime logs on initial load
+  useEffect(() => {
+    fetch("/api/log-visit").catch(() => {});
+  }, []);
+  
   useTypewriterTitle(`@${SITE.handle}`);
 
   // Fetched once here (not inside a view) so switching tabs doesn't refetch
