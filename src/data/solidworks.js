@@ -18,19 +18,19 @@ import { asset } from "../config";
 // Everything below is placeholder content: replace it with your real parts.
 export const SW_MODELS = [
   {
-    id: "gear",
-    name: "Spur Gear",
+    id: "handle",
+    name: "Window Handle",
     description:
-      "18-tooth spur gear with a hub and five lightening holes. Placeholder part: swap it for your own model.",
+      "Modern window handle with a flat, gently curved lever arm, tapered cylindrical hub, and integrated locking latch.",
     icon: "fa-solid fa-gear",
     color: "#c4b5fd",
-    tags: ["Part", "Gear"],
+    tags: ["Part", "Handle"],
     specs: [
-      ["Teeth", "18"],
-      ["Material", "Steel (placeholder)"],
+      ["Type", "Lever Handle"],
+      ["Material", "1023 Carbon Steel Sheet (SS)"],
       ["Software", "SolidWorks"],
     ],
-    source: { type: "procedural", builder: "gear" },
+    source: { type: "stl", url: asset("assets/models/window_handle.STL") },
   },
   {
     id: "flange",
