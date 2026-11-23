@@ -21,7 +21,7 @@ Personal website and 3D CAD portfolio built with React, Vite, and Three.js. It f
 
 ```text
 ├── api/                  # Serverless function for visit logging
-├── public/               # STL models, audio tracks, and static assets
+├── public/               # STL models and static assets
 └── src/
     ├── components/       # Audio player, 3D model viewer, UI components
     ├── context/          # Persistent audio state provider

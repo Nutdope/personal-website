@@ -33,8 +33,8 @@ export default function ProjectCard({ project }) {
 
         {tags.length > 0 && (
           <ul className="project-tags">
-            {tags.map((t) => (
-              <li key={t}>{t}</li>
+            {tags.map((t, i) => (
+              <li key={`${t}-${i}`}>{t}</li>
             ))}
           </ul>
         )}

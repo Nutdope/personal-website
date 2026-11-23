@@ -19,6 +19,21 @@ const HOME = { position: [3.4, 2.2, 4.4], target: [0, 0, 0] };
 const FIT_SIZE = 2.4; // every model is scaled so its largest side is this big
 const MAX_EDGE_VERTS = 400000; // skip crisp edge lines on very heavy meshes
 
+// STL files carry no colour, so parts of a multi-file assembly get these tints
+// (cycled) to tell them apart. Set `color` on a part to choose your own.
+const PART_COLORS = ["#c4b5fd", "#94a3b8", "#a5b4fc", "#d4d4d8", "#7dd3fc", "#fda4af", "#fcd34d", "#86efac"];
+
+/** "/assets/models/Gear_Shaft.STL" -> "Gear Shaft" */
+function nameFromFile(file) {
+  let name = String(file || "").split(/[?#]/)[0].split("/").pop() || "";
+  try {
+    name = decodeURIComponent(name);
+  } catch {
+    // keep the undecoded name
+  }
+  return name.replace(/\.stl$/i, "").replace(/_/g, " ").trim();
+}
+
 /* ------------------------------ helpers ------------------------------ */
 
 function disposeObject(root) {
@@ -38,7 +53,11 @@ function disposeObject(root) {
 function applyLook(root, color) {
   root.traverse((o) => {
     if (!o.isMesh) return;
-    o.material = new THREE.MeshStandardMaterial({ color, metalness: 0.85, roughness: 0.32 });
+    o.material = new THREE.MeshStandardMaterial({
+      color: o.userData.tint ?? color, // per-part tint for multi-file assemblies
+      metalness: 0.85,
+      roughness: 0.32,
+    });
     const position = o.geometry.attributes.position;
     if (position && position.count < MAX_EDGE_VERTS) {
       o.add(
@@ -117,6 +136,39 @@ async function loadModel(model, onProgress) {
     }
     const root = new THREE.Group();
     root.add(new THREE.Mesh(geometry));
+    applyLook(root, model.color);
+    setRotation(root, model.rotation);
+    return root;
+  }
+
+  if (source.type === "stl-parts") {
+    // One assembly = several STL files that share the assembly's coordinates.
+    const list = (source.parts ?? []).map((p) => (typeof p === "string" ? { file: p } : p));
+    if (list.length === 0) throw new Error('"stl-parts" needs at least one file in `parts`');
+
+    const progress = new Array(list.length).fill(0);
+    const loaded = await Promise.all(
+      list.map(async (part, i) => {
+        const url = part.url ?? `${source.base ?? ""}${part.file}`;
+        const buffer = await fetchBuffer(url, (value) => {
+          progress[i] = value;
+          onProgress?.(progress.reduce((a, b) => a + b, 0) / list.length);
+        });
+        const geometry = new STLLoader().parse(buffer);
+        if (!geometry.attributes.position || geometry.attributes.position.count === 0) {
+          throw new Error(`${part.name ?? nameFromFile(url)} is empty or not a valid STL`);
+        }
+        return { part, url, geometry };
+      })
+    );
+
+    const root = new THREE.Group();
+    loaded.forEach(({ part, url, geometry }, i) => {
+      const mesh = new THREE.Mesh(geometry);
+      mesh.name = part.name ?? nameFromFile(part.file ?? url);
+      mesh.userData.tint = part.color ?? PART_COLORS[i % PART_COLORS.length];
+      root.add(mesh);
+    });
     applyLook(root, model.color);
     setRotation(root, model.rotation);
     return root;

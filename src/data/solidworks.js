@@ -48,6 +48,27 @@ export const SW_MODELS = [
     source: { type: "procedural", builder: "flange" },
   },
   {
+  id: "arbore",
+  name: "Arbore",
+  kind: "assembly",
+  description: "Arbore assembly.",
+  icon: "fa-solid fa-gears",
+  tags: ["Assembly"],
+  source: {
+    type: "stl-parts",
+    base: asset("assets/models/arbore/"),
+     parts: [
+      { file: "Arbore - 6411-1 6411_01-1.STL", name: "6411-1 part 01", color: "#b8bcc4" },
+      { file: "Arbore - 6411-1 6411_02-1.STL", name: "6411-1 part 02", color: "#b8bcc4" },
+      { file: "Arbore - 6411-1 6411_03-1.STL", name: "6411-1 part 03", color: "#b8bcc4" },
+      { file: "Arbore - 6411-3 6411_01-1.STL", name: "6411-3 part 01", color: "#b8bcc4" },
+      { file: "Arbore - 6411-3 6411_02-1.STL", name: "6411-3 part 02", color: "#b8bcc4" },
+      { file: "Arbore - 6411-3 6411_03-1.STL", name: "6411-3 part 03", color: "#b8bcc4" },
+      { file: "Arbore - Arbore_test-1.STL", name: "Arbore test", color: "#b8bcc4" },
+    ],
+  },
+},
+  {
     id: "bracket",
     name: "Angle Bracket",
     description:
@@ -62,21 +83,6 @@ export const SW_MODELS = [
     ],
     source: { type: "procedural", builder: "bracket" },
   },
-
-  {
-  id: "arbore",
-  name: "Arbore",
-  description: "Mechanical shaft, 325 mm long.",
-  icon: "fa-solid fa-gears",
-  color: "#c4b5fd",
-  tags: ["Part", "Shaft"],
-  specs: [
-    ["Length", "105 mm"],
-    ["Max diameter", "28 mm"],
-    ["Software", "SolidWorks"],
-  ],
-  source: { type: "stl", url: asset("assets/models/arbore.STL") },
-},
 
  {
   id: "piesa4",

@@ -699,6 +699,8 @@
   /* The viewer sticks to the top while you scroll the list, so picking
      a part shows it right away without scrolling back up. */
   .swv-stage {
+    align-self: stretch;
+    width: 100%;
     top: 76px;
     z-index: 6;
     height: clamp(250px, 38vh, 380px);
