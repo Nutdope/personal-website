@@ -66,7 +66,7 @@ export const SW_MODELS = [
   {
   id: "arbore",
   name: "Arbore",
-  description: "Mechanical shaft, 105 mm long.",
+  description: "Mechanical shaft, 325 mm long.",
   icon: "fa-solid fa-gears",
   color: "#c4b5fd",
   tags: ["Part", "Shaft"],

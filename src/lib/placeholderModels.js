@@ -1,10 +1,12 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 /**
  * Built-in stand-in parts so the viewer works before you have real exports.
  * Each builder returns a THREE.Group of un-textured meshes (the viewer gives
  * them their metal look). Parts are modelled Z-up, like CAD, and wrapped in a
- * group that turns them Y-up for three.js.
+ * group that turns them Y-up for three.js. Every mesh is named, which is what
+ * the "Parts" panel shows.
  */
 
 const extrude = (depth, bevel = 0.015) => ({
@@ -22,6 +24,12 @@ const circle = (radius, x = 0, y = 0) => {
   return p;
 };
 
+const disk = (radius) => {
+  const s = new THREE.Shape();
+  s.absarc(0, 0, radius, 0, Math.PI * 2, false);
+  return s;
+};
+
 const rect = (x0, y0, x1, y1) => {
   const s = new THREE.Shape();
   s.moveTo(x0, y0);
@@ -32,10 +40,12 @@ const rect = (x0, y0, x1, y1) => {
   return s;
 };
 
-function mesh(shape, depth, zOffset = 0) {
+function mesh(shape, depth, zOffset = 0, name = "") {
   const geometry = new THREE.ExtrudeGeometry(shape, extrude(depth));
   geometry.translate(0, 0, zOffset);
-  return new THREE.Mesh(geometry);
+  const m = new THREE.Mesh(geometry);
+  m.name = name;
+  return m;
 }
 
 function toYUp(group) {
@@ -79,18 +89,18 @@ function spurGear() {
   hub.holes.push(circle(0.22));
 
   const g = new THREE.Group();
-  g.add(mesh(body, 0.28, -0.14));
-  g.add(mesh(hub, 0.5, -0.25));
+  g.add(mesh(body, 0.28, -0.14, "Gear body"));
+  g.add(mesh(hub, 0.5, -0.25, "Hub"));
   return toYUp(g);
 }
 
 function flange() {
-  const disc = new THREE.Shape();
-  disc.absarc(0, 0, 1, 0, Math.PI * 2, false);
-  disc.holes.push(circle(0.38)); // bore
+  const plate = new THREE.Shape();
+  plate.absarc(0, 0, 1, 0, Math.PI * 2, false);
+  plate.holes.push(circle(0.38)); // bore
   for (let i = 0; i < 6; i++) {
     const a = (i * Math.PI * 2) / 6;
-    disc.holes.push(circle(0.09, Math.cos(a) * 0.72, Math.sin(a) * 0.72)); // bolt holes
+    plate.holes.push(circle(0.09, Math.cos(a) * 0.72, Math.sin(a) * 0.72)); // bolt holes
   }
 
   const neck = new THREE.Shape();
@@ -98,31 +108,49 @@ function flange() {
   neck.holes.push(circle(0.38));
 
   const g = new THREE.Group();
-  g.add(mesh(disc, 0.16, -0.08));
-  g.add(mesh(neck, 0.5, 0));
+  g.add(mesh(plate, 0.16, -0.08, "Flange plate"));
+  g.add(mesh(neck, 0.5, 0, "Neck"));
   return toYUp(g);
 }
 
+/** One bolt = shaft + head merged into a single named mesh. */
+function bolt(x, y, name) {
+  const shaft = new THREE.ExtrudeGeometry(disk(0.1), extrude(0.5, 0.01));
+  shaft.translate(0, 0, -0.2);
+  const head = new THREE.ExtrudeGeometry(disk(0.19), extrude(0.08, 0.01));
+  head.translate(0, 0, 0.2);
+
+  const merged = mergeGeometries([shaft, head]);
+  const m = new THREE.Mesh(merged ?? shaft);
+  m.position.set(x, y, 0);
+  m.name = name;
+  return m;
+}
+
+/** A small assembly: base plate + upright plate + four bolts. Good for trying the parts panel. */
 function angleBracket() {
-  // Base plate with four mounting holes
-  const base = rect(-1, 0, 1, 1.2);
-  [
+  const boltSpots = [
     [-0.7, 0.3],
     [0.7, 0.3],
     [-0.7, 0.7],
     [0.7, 0.7],
-  ].forEach(([x, y]) => base.holes.push(circle(0.12, x, y)));
+  ];
+
+  // Base plate with four mounting holes
+  const base = rect(-1, 0, 1, 1.2);
+  boltSpots.forEach(([x, y]) => base.holes.push(circle(0.12, x, y)));
 
   // Upright plate with two holes, stood up along the back edge of the base
   const wallShape = rect(-1, 0, 1, 1.2);
   [-0.5, 0.5].forEach((x) => wallShape.holes.push(circle(0.14, x, 0.7)));
-  const wall = mesh(wallShape, 0.2);
+  const wall = mesh(wallShape, 0.2, 0, "Upright plate");
   wall.rotation.x = Math.PI / 2;
   wall.position.y = 1.2;
 
   const g = new THREE.Group();
-  g.add(mesh(base, 0.2));
+  g.add(mesh(base, 0.2, 0, "Base plate"));
   g.add(wall);
+  boltSpots.forEach(([x, y], i) => g.add(bolt(x, y, `Bolt ${i + 1}`)));
   return toYUp(g);
 }
 

@@ -4,7 +4,16 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { buildPlaceholder } from "../lib/placeholderModels";
+import {
+  applyExplode,
+  buildPartsTree,
+  prepareExplode,
+  setHiddenParts,
+  setHighlight,
+} from "../lib/partsTree";
+import { saveThumb } from "../lib/thumbs";
 
 const HOME = { position: [3.4, 2.2, 4.4], target: [0, 0, 0] };
 const FIT_SIZE = 2.4; // every model is scaled so its largest side is this big
@@ -55,26 +64,54 @@ function setRotation(root, degrees) {
   root.rotation.set(...degrees.map((d) => THREE.MathUtils.degToRad(d)));
 }
 
-async function loadModel(model) {
+/** Downloads a file, reporting progress (0-1) when the server says how big it is. */
+async function fetchBuffer(url, onProgress) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`File not found (${response.status}) at ${url}`);
+  // A missing file makes the dev server answer with the site's own HTML page.
+  if ((response.headers.get("content-type") || "").includes("text/html")) {
+    throw new Error(`Got a web page instead of a model file: nothing exists at ${url}`);
+  }
+
+  const total = Number(response.headers.get("content-length")) || 0;
+  if (!response.body || !total) {
+    const buffer = await response.arrayBuffer();
+    onProgress?.(1);
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    onProgress?.(Math.min(1, received / total));
+  }
+  const out = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out.buffer;
+}
+
+async function loadModel(model, onProgress) {
   const { source } = model;
 
   if (source.type === "procedural") {
     const root = buildPlaceholder(source.builder);
     applyLook(root, model.color);
+    onProgress?.(1);
     return root;
   }
 
   if (source.type === "stl") {
-    const response = await fetch(source.url);
-    if (!response.ok) {
-      throw new Error(`File not found (${response.status}) at ${source.url}`);
-    }
-    // A missing file makes the dev server answer with the site's own HTML page.
-    if ((response.headers.get("content-type") || "").includes("text/html")) {
-      throw new Error(`Got a web page instead of an STL: nothing exists at ${source.url}`);
-    }
-    const geometry = new STLLoader().parse(await response.arrayBuffer());
-    // A missing file makes the dev server answer with index.html, which parses to nothing.
+    const buffer = await fetchBuffer(source.url, onProgress);
+    const geometry = new STLLoader().parse(buffer);
     if (!geometry.attributes.position || geometry.attributes.position.count === 0) {
       throw new Error("STL file is empty or not a valid STL");
     }
@@ -86,7 +123,10 @@ async function loadModel(model) {
   }
 
   if (source.type === "glb") {
-    const gltf = await new GLTFLoader().loadAsync(source.url);
+    const buffer = await fetchBuffer(source.url, onProgress);
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder); // lets you use gltfpack-compressed files
+    const gltf = await loader.parseAsync(buffer, "");
     setRotation(gltf.scene, model.rotation);
     return gltf.scene;
   }
@@ -116,21 +156,94 @@ function resetCamera(api) {
   api.controls.update();
 }
 
+/** Glows the part with this id (null clears it). Only one part is lit at a time. */
+function highlightPart(api, id) {
+  const next = id && api.parts?.byId.has(id) ? id : null;
+  if (api.highlightId === next) return;
+  if (api.highlightId && api.parts?.byId.has(api.highlightId)) {
+    setHighlight(api.parts.byId.get(api.highlightId), false);
+  }
+  api.highlightId = next;
+  if (next) setHighlight(api.parts.byId.get(next), true);
+}
+
+/** Small preview picture for the list: the model from the default angle on the page's dark/purple backdrop. */
+function captureThumb(api, renderer, scene, id) {
+  try {
+    const { camera, controls } = api;
+    const savedPosition = camera.position.clone();
+    const savedTarget = controls.target.clone();
+
+    camera.position.set(...HOME.position);
+    controls.target.set(...HOME.target);
+    camera.lookAt(controls.target);
+    renderer.render(scene, camera); // draw and read in the same frame (no preserveDrawingBuffer needed)
+
+    const W = 192;
+    const H = 144;
+    const out = document.createElement("canvas");
+    out.width = W;
+    out.height = H;
+    const ctx = out.getContext("2d");
+    ctx.fillStyle = "#101016";
+    ctx.fillRect(0, 0, W, H);
+    const glow = ctx.createRadialGradient(W / 2, H * 0.55, 4, W / 2, H * 0.55, W * 0.6);
+    glow.addColorStop(0, "rgba(168, 85, 247, 0.35)");
+    glow.addColorStop(1, "rgba(168, 85, 247, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // Crop the live canvas to a centered 4:3 box.
+    const src = renderer.domElement;
+    const aspect = W / H;
+    let cw = src.width;
+    let ch = src.height;
+    if (cw / ch > aspect) cw = ch * aspect;
+    else ch = cw / aspect;
+    ctx.drawImage(src, (src.width - cw) / 2, (src.height - ch) / 2, cw, ch, 0, 0, W, H);
+
+    saveThumb(id, out.toDataURL("image/jpeg", 0.82));
+
+    camera.position.copy(savedPosition);
+    controls.target.copy(savedTarget);
+  } catch (err) {
+    console.warn("Couldn't capture a thumbnail:", err);
+  }
+}
+
 /* ----------------------------- component ----------------------------- */
 
 /**
- * three.js viewer: drag to rotate, scroll/pinch to zoom, right-drag to pan.
+ * three.js viewer: drag to rotate, scroll/pinch to zoom, right-drag/two fingers to pan.
  * Plain three.js (no wrapper library) so the only extra dependency is `three`.
+ *
+ * Everything the page controls is a prop:
+ *   explode (0-1), hidden (Set of part ids), highlightId (part id | null)
+ * and it reports back through onStatus({ loading, error, progress }) and
+ * onParts(list | null) (the model's parts, or null for a single solid).
  */
-export default function ModelViewer({ model, autoRotate, wireframe, resetKey, onStatus }) {
+export default function ModelViewer({
+  model,
+  autoRotate,
+  wireframe,
+  resetKey,
+  explode,
+  hidden,
+  highlightId,
+  onStatus,
+  onParts,
+}) {
   const mountRef = useRef(null);
   const apiRef = useRef(null);
-  const optsRef = useRef({ autoRotate, wireframe });
+  const optsRef = useRef({ autoRotate, wireframe, explode, hidden, highlightId });
   const statusRef = useRef(onStatus);
+  const partsRef = useRef(onParts);
 
+  // Declared first so the other effects always see the latest props.
   useEffect(() => {
-    optsRef.current = { autoRotate, wireframe };
+    optsRef.current = { autoRotate, wireframe, explode, hidden, highlightId };
     statusRef.current = onStatus;
+    partsRef.current = onParts;
   });
 
   // Scene, camera, lights, render loop (created once)
@@ -198,7 +311,12 @@ export default function ModelViewer({ model, autoRotate, wireframe, resetKey, on
       controls,
       holder,
       stage,
-      current: null,
+      current: null, // the model currently on stage
+      parts: null, // buildPartsTree() result, or null for a single solid
+      explodeData: null,
+      explodeCur: 0,
+      highlightId: null,
+      thumbFor: null, // model id waiting for its preview snapshot
       token: 0,
       disposed: false,
       intro: 1,
@@ -223,15 +341,36 @@ export default function ModelViewer({ model, autoRotate, wireframe, resetKey, on
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const dt = clock.getDelta();
+      const opts = optsRef.current;
 
-      controls.autoRotate = optsRef.current.autoRotate;
+      controls.autoRotate = opts.autoRotate;
+
       if (api.intro < 1) {
         api.intro = Math.min(1, api.intro + dt / 0.55);
         const eased = 1 - Math.pow(1 - api.intro, 3);
         holder.scale.setScalar(0.86 + 0.14 * eased);
       }
+
+      // Ease the explode slider toward its target so parts glide instead of jumping.
+      if (api.explodeData) {
+        const diff = opts.explode - api.explodeCur;
+        if (Math.abs(diff) > 0.0005) {
+          api.explodeCur += diff * Math.min(1, dt * 9);
+          applyExplode(api.explodeData, api.explodeCur);
+        } else if (api.explodeCur !== opts.explode) {
+          api.explodeCur = opts.explode;
+          applyExplode(api.explodeData, api.explodeCur);
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
+
+      if (api.thumbFor && api.intro >= 1 && api.current) {
+        const id = api.thumbFor;
+        api.thumbFor = null;
+        if (!opts.wireframe) captureThumb(api, renderer, scene, id);
+      }
     };
     tick();
 
@@ -241,6 +380,7 @@ export default function ModelViewer({ model, autoRotate, wireframe, resetKey, on
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
+      highlightPart(api, null);
       if (api.current) disposeObject(api.current);
       disc.geometry.dispose();
       disc.material.dispose();
@@ -261,38 +401,69 @@ export default function ModelViewer({ model, autoRotate, wireframe, resetKey, on
     if (!api) return;
 
     const token = ++api.token;
-    statusRef.current?.({ loading: true, error: null });
+    statusRef.current?.({ loading: true, error: null, progress: 0 });
 
     const removeCurrent = () => {
       if (!api.current) return;
+      highlightPart(api, null); // put the original materials back before disposing
       api.holder.remove(api.current);
       disposeObject(api.current);
       api.current = null;
+      api.parts = null;
+      api.explodeData = null;
+      api.explodeCur = 0;
+      api.thumbFor = null;
     };
 
-    loadModel(model)
+    let lastPercent = -1;
+    const onProgress = (p) => {
+      if (api.disposed || api.token !== token) return;
+      const percent = Math.round(p * 100);
+      if (percent === lastPercent) return;
+      lastPercent = percent;
+      statusRef.current?.({ loading: true, error: null, progress: p });
+    };
+
+    loadModel(model, onProgress)
       .then((root) => {
         if (api.disposed || api.token !== token) {
           disposeObject(root); // a newer selection superseded this one
           return;
         }
         removeCurrent();
+
         const { wrap, floorY } = fit(root);
+        wrap.updateMatrixWorld(true);
+        const tree = buildPartsTree(root);
+
         api.current = wrap;
+        api.parts = tree;
+        api.explodeData = tree ? prepareExplode(tree.topParts, tree.assemblyNode) : null;
+        api.explodeCur = 0;
         api.holder.add(wrap);
         api.stage.position.y = floorY;
-        applyWireframe(wrap, optsRef.current.wireframe);
+
+        const opts = optsRef.current;
+        applyWireframe(wrap, opts.wireframe);
+        setHiddenParts(tree, opts.hidden);
+        highlightPart(api, opts.highlightId);
+
         api.intro = 0; // replay the small scale-in
+        api.thumbFor = model.id; // snapshot once the intro has finished
         resetCamera(api);
-        statusRef.current?.({ loading: false, error: null });
+
+        partsRef.current?.(tree ? tree.items : null);
+        statusRef.current?.({ loading: false, error: null, progress: 1 });
       })
       .catch((err) => {
         if (api.disposed || api.token !== token) return;
         console.error(err);
         removeCurrent();
+        partsRef.current?.(null);
         statusRef.current?.({
           loading: false,
           error: `Couldn't load "${model.name}": ${err?.message || "unknown error"}`,
+          progress: 0,
         });
       });
   }, [model]);
@@ -303,8 +474,18 @@ export default function ModelViewer({ model, autoRotate, wireframe, resetKey, on
   }, [wireframe]);
 
   useEffect(() => {
+    const api = apiRef.current;
+    if (api) setHiddenParts(api.parts, hidden);
+  }, [hidden]);
+
+  useEffect(() => {
+    const api = apiRef.current;
+    if (api) highlightPart(api, highlightId);
+  }, [highlightId]);
+
+  useEffect(() => {
     if (resetKey > 0 && apiRef.current) resetCamera(apiRef.current);
   }, [resetKey]);
 
-  return <div className="sw-canvas" ref={mountRef} />;
+  return <div className="swv-canvas" ref={mountRef} />;
 }
