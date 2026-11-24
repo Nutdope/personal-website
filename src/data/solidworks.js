@@ -65,7 +65,7 @@ export const SW_MODELS = [
   description: "Arbore assembly.",
   icon: "fa-solid fa-gears",
   tags: ["Assembly"],
-  source: { type: "stl-folder", folder: "arbore", color: "#b8bcc4" },
+  source: { type: "stl-folder", folder: "arbore" },
 },
   {
     id: "fidget-spinner",

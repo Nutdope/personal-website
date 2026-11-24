@@ -25,8 +25,8 @@ export const PROJECTS = [
     cta: "Open 3D viewer",
   },
   {
-    title: "Project title",
-    description: "One or two sentences on what it does and what you built.",
+    title: "AutoDraw 2D: 3D CAD to 2D drawing",
+    description: "Coming soon....",
     tags: ["Tag", "Tag"],
     icon: "fa-solid fa-code",
   },
