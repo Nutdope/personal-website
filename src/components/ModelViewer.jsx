@@ -14,6 +14,7 @@ import {
   setHighlight,
 } from "../lib/partsTree";
 import { saveThumb } from "../lib/thumbs";
+import { folderParts } from "../lib/modelFolders";
 
 const HOME = { position: [3.4, 2.2, 4.4], target: [0, 0, 0] };
 const FIT_SIZE = 2.4; // every model is scaled so its largest side is this big
@@ -141,10 +142,14 @@ async function loadModel(model, onProgress) {
     return root;
   }
 
-  if (source.type === "stl-parts") {
+  if (source.type === "stl-parts" || source.type === "stl-folder") {
     // One assembly = several STL files that share the assembly's coordinates.
-    const list = (source.parts ?? []).map((p) => (typeof p === "string" ? { file: p } : p));
-    if (list.length === 0) throw new Error('"stl-parts" needs at least one file in `parts`');
+    // "stl-folder" finds them by itself in public/assets/models/<folder>/.
+    const list =
+      source.type === "stl-folder"
+        ? folderParts(source)
+        : (source.parts ?? []).map((p) => (typeof p === "string" ? { file: p } : p));
+    if (list.length === 0) throw new Error(`"${source.type}" found no STL files`);
 
     const progress = new Array(list.length).fill(0);
     const loaded = await Promise.all(

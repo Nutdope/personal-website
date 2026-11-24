@@ -10,6 +10,17 @@ import { asset } from "../config";
 //   { type: "stl", url: asset("assets/models/my-part.stl") }   <- SolidWorks: Save As > STL
 //   { type: "glb", url: asset("assets/models/my-part.glb") }   <- keeps its own colors/materials
 //   { type: "procedural", builder: "gear" | "flange" | "bracket" }   <- built-in placeholders
+//   { type: "stl-folder", folder: "arbore" }   <- assembly: every STL in public/assets/models/arbore/
+//
+// stl-folder names each part from its file name ("Arbore - 6411-1 6411_01-1.STL"
+// becomes "6411-1 6411 01"). Optional extras, keyed by file name or that auto name:
+//   color: "#b8bcc4"                       one tint for every part
+//   names: { "6411-1 6411 01": "Bush" }    rename a part
+//   colors: { "6411-1 6411 01": "#f00" }   tint one part
+//   exclude: ["Arbore test"]               leave a file out
+// For the parts to line up, export the assembly from SolidWorks as STL with
+// "Save all components of an assembly in separate files" and
+// "Do not translate STL output data to positive space" ticked.
 //
 // Put your files in public/assets/models/.
 // rotation: [xDeg, yDeg, zDeg], only for stl/glb. If your part loads lying on its
@@ -54,20 +65,17 @@ export const SW_MODELS = [
   description: "Arbore assembly.",
   icon: "fa-solid fa-gears",
   tags: ["Assembly"],
-  source: {
-    type: "stl-parts",
-    base: asset("assets/models/arbore/"),
-     parts: [
-      { file: "Arbore - 6411-1 6411_01-1.STL", name: "6411-1 part 01", color: "#b8bcc4" },
-      { file: "Arbore - 6411-1 6411_02-1.STL", name: "6411-1 part 02", color: "#b8bcc4" },
-      { file: "Arbore - 6411-1 6411_03-1.STL", name: "6411-1 part 03", color: "#b8bcc4" },
-      { file: "Arbore - 6411-3 6411_01-1.STL", name: "6411-3 part 01", color: "#b8bcc4" },
-      { file: "Arbore - 6411-3 6411_02-1.STL", name: "6411-3 part 02", color: "#b8bcc4" },
-      { file: "Arbore - 6411-3 6411_03-1.STL", name: "6411-3 part 03", color: "#b8bcc4" },
-      { file: "Arbore - Arbore_test-1.STL", name: "Arbore test", color: "#b8bcc4" },
-    ],
-  },
+  source: { type: "stl-folder", folder: "arbore", color: "#b8bcc4" },
 },
+  {
+    id: "fidget-spinner",
+    name: "Fidget Spinner",
+    kind: "assembly",
+    description: "Three-lobe fidget spinner assembly with 608-2Z bearings.",
+    icon: "fa-solid fa-fan",
+    tags: ["Assembly"],
+    source: { type: "stl-folder", folder: "fidget_spinner" },
+  },
   {
     id: "bracket",
     name: "Angle Bracket",
