@@ -8,7 +8,7 @@ export const cardVariants = {
 };
 
 export default function ProjectCard({ project }) {
-  const { title, description, tags = [], icon, image, live, repo, to, cta } = project;
+  const { title, description, tags = [], icon, image, live, repo, to, href, cta } = project;
 
   return (
     <motion.article
@@ -18,6 +18,15 @@ export default function ProjectCard({ project }) {
     >
       {/* Stretched link: makes the whole card clickable without nesting anchors. */}
       {to && <Link className="project-card-link" to={to} aria-label={`Open ${title}`} />}
+      {!to && href && (
+        <a
+          className="project-card-link"
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${cta || "Open"} ${title} (opens in a new tab)`}
+        />
+      )}
 
       <div className="project-thumb">
         {image ? (
@@ -39,9 +48,10 @@ export default function ProjectCard({ project }) {
           </ul>
         )}
 
-        {to && (
+        {(to || href) && (
           <span className="project-cta">
-            {cta || "Open"} <i className="fa-solid fa-arrow-right" />
+            {cta || "Open"}{" "}
+            <i className={to ? "fa-solid fa-arrow-right" : "fa-solid fa-arrow-up-right-from-square"} />
           </span>
         )}
 

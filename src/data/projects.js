@@ -2,7 +2,8 @@
 //
 // Fields: title, description, tags[], icon (Font Awesome class), live (URL),
 //         repo (URL), image ("assets/images/<file>" inside /public, optional),
-//         to ("/route": makes the whole card a link), cta (text for that link)
+//         to ("/route": makes the whole card a link), cta (text for that link),
+//         href (external URL: makes the whole card a link that opens in a new tab)
 //
 // Everything except the first entry is placeholder content: replace it.
 export const PROJECTS = [
@@ -26,9 +27,12 @@ export const PROJECTS = [
   },
   {
     title: "AutoDraw 2D: 3D CAD to 2D drawing",
-    description: "Coming soon....",
-    tags: ["Tag", "Tag"],
+    description:
+      "Converts 3D CAD .STEP files into annotated 2D engineering drawings with AI auto-dimensioning and DXF export.",
+    tags: ["Python", "React", "Gemini AI"],
     icon: "fa-solid fa-code",
+    href: "https://autodraw.nutdope.xyz",
+    cta: "Launch App",
   },
   {
     title: "Project title",
